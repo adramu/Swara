@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SWARA - Surakarta Awareness Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #991B1B;
+            --primary-light: #B91C1C;
+            --secondary: #D4AF37;
+            --accent: #FEE2E2;
+            --text-dark: #1F2937;
+            --board-wood: #D2B48C;
+            --board-line: #4B2C20;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #fcfcfc;
+            color: var(--text-dark);
+            scroll-behavior: smooth;
+        }
+
+        .batik-bg {
+            background-image: url('https://www.transparenttextures.com/patterns/batik-fractal.png');
+            opacity: 0.05;
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        /* --- STYLING PAPAN SURAKARTA ASLI --- */
+        #game-board {
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1/1;
+            background: #fdf5e6;
+            border: 8px solid #5d4037;
+            position: relative;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            border-radius: 12px;
+            overflow: visible;
+            touch-action: none;
+        }
+
+        .board-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .grid-line {
+            stroke: var(--board-line);
+            stroke-width: 2;
+            stroke-linecap: round;
+        }
+
+        .arc-line {
+            fill: none;
+            stroke: var(--board-line);
+            stroke-width: 2.5;
+            stroke-opacity: 0.7;
+        }
+
+        .point {
+            width: 34px;
+            height: 34px;
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .point:hover {
+            background: rgba(153, 27, 27, 0.1);
+        }
+
+        .point.selected {
+            background: rgba(153, 27, 27, 0.2);
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+
+        .piece {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            z-index: 20;
+            pointer-events: none;
+            position: relative;
+        }
+
+        .piece-player {
+            background: radial-gradient(circle at 30% 30%, #ff4d4d, #991B1B);
+            border: 2px solid #fff;
+        }
+
+        .piece-ai {
+            background: radial-gradient(circle at 30% 30%, #666, #111);
+            border: 2px solid #fff;
+        }
+        /* --- END STYLING PAPAN --- */
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-light);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sticky top-0 bg-white/90 backdrop-blur-md shadow-md z-40 border-b border-red-100">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="text-2xl font-extrabold text-[#991B1B] flex items-center gap-2">
+                <i class="fa-solid fa-shield-heart"></i> SWARA
+            </div>
+            <div class="hidden md:flex gap-8 font-semibold text-gray-700">
+                <a href="#about" class="hover:text-red-700 transition">Riset</a>
+                <a href="#game" class="hover:text-red-700 transition">Permainan</a>
+                <a href="#forum" class="hover:text-red-700 transition">Forum</a>
+            </div>
+            <button class="bg-[#991B1B] text-white px-6 py-2 rounded-full font-bold hover:shadow-lg transition">LOGIN</button>
+        </div>
+    </nav>
+
+    <header class="relative overflow-hidden py-24 bg-[#991B1B] text-white">
+        <div class="batik-bg"></div>
+        <div class="container mx-auto px-6 relative flex flex-col md:flex-row items-center gap-12">
+            <div class="md:w-3/5">
+                <span class="text-yellow-400 font-bold tracking-widest uppercase text-xs mb-4 block">Social Science Integration</span>
+                <h1 class="text-5xl md:text-7xl font-extrabold mb-6 leading-tight">
+                    Lindungi Diri Lewat <span class="text-yellow-400">Tradisi</span>
+                </h1>
+                <p class="text-xl text-red-100 mb-10 leading-relaxed max-w-2xl">
+                    SWARA: Integrating Surakarta Board-game into Early Childhood Sexual Harassment Awareness
+                </p>
+                <div class="flex flex-wrap gap-4">
+                    <a href="#game" class="bg-white text-[#991B1B] px-8 py-4 rounded-xl font-bold shadow-2xl hover:bg-red-50 transition">Mainkan Sekarang</a>
+                    <a href="#" class="border-2 border-white/40 px-8 py-4 rounded-xl font-bold hover:bg-white/10 transition">Buka Slide Riset</a>
+                </div>
+            </div>
+            <div class="md:w-2/5 flex justify-center">
+                <div class="relative">
+                    <div class="absolute -inset-4 bg-yellow-400/20 blur-3xl rounded-full"></div>
+                    <i class="fa-solid fa-scale-balanced text-[150px] md:text-[200px] text-white/20 relative"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="about" class="py-20 bg-white">
+        <div class="container mx-auto px-6">
+            <div class="max-w-3xl mx-auto text-center mb-16">
+                <h2 class="text-4xl font-extrabold mb-6 text-[#991B1B]">Kenapa Kesadaran Hukum?</h2>
+                <p class="text-gray-600 text-lg">
+                    Riset kami menunjukkan bahwa edukasi hukum melalui media yang akrab dengan budaya lokal meningkatkan daya serap informasi pada anak hingga 88%.
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-red-50 p-8 rounded-2xl border border-red-100">
+                    <div class="w-14 h-14 bg-red-900 text-white flex items-center justify-center rounded-xl mb-6 text-2xl shadow-lg">
+                        <i class="fa-solid fa-gavel"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4 text-red-900">Landasan UU</h3>
+                    <p class="text-red-800/80">Implementasi UU No. 35/2014 & UU No. 12/2022 dalam bahasa yang mudah dipahami anak.</p>
+                </div>
+                <div class="bg-red-50 p-8 rounded-2xl border border-red-100">
+                    <div class="w-14 h-14 bg-red-900 text-white flex items-center justify-center rounded-xl mb-6 text-2xl shadow-lg">
+                        <i class="fa-solid fa-brain"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4 text-red-900">Metode Kognitif</h3>
+                    <p class="text-red-800/80">Belajar sambil bermain (Learning by Playing) untuk menghilangkan rasa takut saat belajar hal sensitif.</p>
+                </div>
+                <div class="bg-red-50 p-8 rounded-2xl border border-red-100">
+                    <div class="w-14 h-14 bg-red-900 text-white flex items-center justify-center rounded-xl mb-6 text-2xl shadow-lg">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4 text-red-900">Self Protection</h3>
+                    <p class="text-red-800/80">Membangun kedaulatan tubuh (body autonomy) sebagai hak hukum dasar setiap individu.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="game" class="py-20 bg-gray-50 border-y border-gray-100">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col lg:flex-row items-center gap-16">
+                <div class="lg:w-1/2">
+                    <div class="text-center lg:text-left mb-8">
+                        <h2 class="text-4xl font-extrabold text-[#991B1B] mb-4">Board Game Surakarta</h2>
+                        <p class="text-gray-600 mb-2">Klik bidak <b>Merah</b>, lalu klik titik kosong di sekitarnya untuk melangkah.</p>
+                        <p class="text-sm text-red-700 font-semibold italic">Setiap langkah melatih kewaspadaanmu!</p>
+                    </div>
+                    <div id="game-board-container" class="flex justify-center">
+                        <div id="game-board">
+                            <!-- SVG PAPAN SURAKARTA ASLI -->
+                            <svg class="board-svg" viewBox="0 0 100 100">
+                                <!-- Grid Lines -->
+                                <line x1="10" y1="10" x2="90" y2="10" class="grid-line" />
+                                <line x1="10" y1="26" x2="90" y2="26" class="grid-line" />
+                                <line x1="10" y1="42" x2="90" y2="42" class="grid-line" />
+                                <line x1="10" y1="58" x2="90" y2="58" class="grid-line" />
+                                <line x1="10" y1="74" x2="90" y2="74" class="grid-line" />
+                                <line x1="10" y1="90" x2="90" y2="90" class="grid-line" />
+                                
+                                <line x1="10" y1="10" x2="10" y2="90" class="grid-line" />
+                                <line x1="26" y1="10" x2="26" y2="90" class="grid-line" />
+                                <line x1="42" y1="10" x2="42" y2="90" class="grid-line" />
+                                <line x1="58" y1="10" x2="58" y2="90" class="grid-line" />
+                                <line x1="74" y1="10" x2="74" y2="90" class="grid-line" />
+                                <line x1="90" y1="10" x2="90" y2="90" class="grid-line" />
+
+                                <!-- Diagonal Lines -->
+                                <line x1="10" y1="10" x2="90" y2="90" class="grid-line" style="opacity:0.2" />
+                                <line x1="90" y1="10" x2="10" y2="90" class="grid-line" style="opacity:0.2" />
+
+                                <!-- Jalur Lingkar Surakarta -->
+                                <path d="M 26 10 A 16 16 0 0 0 10 26" class="arc-line" />
+                                <path d="M 42 10 A 32 32 0 0 0 10 42" class="arc-line" />
+                                <path d="M 58 10 A 32 32 0 0 1 90 42" class="arc-line" />
+                                <path d="M 74 10 A 16 16 0 0 1 90 26" class="arc-line" />
+                                <path d="M 26 90 A 16 16 0 0 1 10 74" class="arc-line" />
+                                <path d="M 42 90 A 32 32 0 0 1 10 58" class="arc-line" />
+                                <path d="M 58 90 A 32 32 0 0 0 90 58" class="arc-line" />
+                                <path d="M 74 90 A 16 16 0 0 0 90 74" class="arc-line" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="lg:w-1/2 space-y-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <h4 class="font-bold text-red-900 flex items-center gap-2 mb-4">
+                            <i class="fa-solid fa-circle-info"></i> Logika Permainan
+                        </h4>
+                        <p class="text-gray-600 leading-relaxed text-sm">
+                            Garis lengkung di sudut papan melambangkan **"Jalur Hukum"**. Dalam permainan aslinya, bidak harus melewati jalur ini untuk memakan lawan. Di SWARA, setiap pergerakan mensimulasikan langkah sadar hukum untuk melindungi kedaulatan tubuh.
+                        </p>
+                    </div>
+                    <div class="bg-red-900 text-white p-8 rounded-2xl shadow-xl">
+                        <h3 class="text-2xl font-bold mb-4">Skor Kesadaran</h3>
+                        <div class="flex gap-4 mb-6">
+                            <div class="flex-1 bg-white/10 p-4 rounded-xl text-center">
+                                <div id="stat-score" class="text-3xl font-black text-yellow-400">0</div>
+                                <div class="text-[10px] uppercase tracking-wider font-bold">Poin Edukasi</div>
+                            </div>
+                            <div class="flex-1 bg-white/10 p-4 rounded-xl text-center">
+                                <div id="stat-steps" class="text-3xl font-black text-white">0</div>
+                                <div class="text-[10px] uppercase tracking-wider font-bold">Langkah</div>
+                            </div>
+                        </div>
+                        <button onclick="initBoard()" class="w-full bg-yellow-400 text-red-900 px-6 py-3 rounded-lg font-bold hover:bg-yellow-300 transition">RESET PAPAN</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="forum" class="py-20 bg-white">
+        <div class="container mx-auto px-6 max-w-5xl">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">
+                <div class="max-w-2xl">
+                    <h2 class="text-4xl font-extrabold text-[#991B1B] mb-4">Forum Suara Kita</h2>
+                    <p class="text-gray-600">Komunitas aman untuk berdiskusi, berbagi pengalaman, dan saling mendukung dalam edukasi perlindungan anak.</p>
+                </div>
+                <button onclick="togglePostModal()" class="bg-[#991B1B] text-white px-6 py-3 rounded-xl font-bold hover:shadow-xl transition flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-pen-to-square"></i> Buat Diskusi Baru
+                </button>
+            </div>
+            
+            <div class="grid lg:grid-cols-4 gap-8">
+                <!-- Sidebar Kategori -->
+                <div class="lg:col-span-1 space-y-4">
+                    <h3 class="font-bold text-gray-900 px-2">Kategori</h3>
+                    <div class="flex flex-col gap-1">
+                        <button class="text-left px-4 py-2 rounded-lg bg-red-50 text-red-900 font-bold text-sm">Semua Topik</button>
+                        <button class="text-left px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-600 text-sm transition">Tips Parenting</button>
+                        <button class="text-left px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-600 text-sm transition">Kesehatan Mental</button>
+                        <button class="text-left px-4 py-2 rounded-lg hover:bg-gray-100 text-gray-600 text-sm transition">Konsultasi Hukum</button>
+                    </div>
+                </div>
+
+                <!-- List Diskusi -->
+                <div class="lg:col-span-3 space-y-4" id="forum-list">
+                    <!-- Item Diskusi 1 -->
+                    <div class="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-lg transition-all">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold">BS</div>
+                                <div>
+                                    <h5 class="text-sm font-bold text-gray-900">Bunda Siska</h5>
+                                    <p class="text-[10px] text-gray-400">2 jam yang lalu</p>
+                                </div>
+                            </div>
+                            <span class="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full uppercase tracking-wider">Tips Parenting</span>
+                        </div>
+                        <h4 class="text-xl font-bold text-gray-800 mb-2">Bagaimana menjelaskan "Pants Rule" ke anak usia 4 tahun?</h4>
+                        <p class="text-gray-600 text-sm line-clamp-2 mb-4 leading-relaxed text-sm">
+                            Saya baru saja mencoba memainkan game Surakarta di platform ini bersama si kecil. Ada yang punya saran pemilihan kata yang tepat agar anak tidak takut?
+                        </p>
+                        <div class="flex items-center gap-6 pt-4 border-t border-gray-50 text-sm">
+                            <button onclick="handleLike(this)" class="flex items-center gap-2 text-gray-500 hover:text-red-600 transition group">
+                                <i class="fa-regular fa-heart group-active:scale-125 transition"></i> <span class="like-count">24</span> Suka
+                            </button>
+                            <div class="flex items-center gap-2 text-gray-500">
+                                <i class="fa-regular fa-comment"></i> 12 Balasan
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item Diskusi 2 -->
+                    <div class="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-lg transition-all">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold">PK</div>
+                                <div>
+                                    <h5 class="text-sm font-bold text-gray-900">Pak Kurniawan</h5>
+                                    <p class="text-[10px] text-gray-400">5 jam yang lalu</p>
+                                </div>
+                            </div>
+                            <span class="px-3 py-1 bg-purple-50 text-purple-600 text-[10px] font-bold rounded-full uppercase tracking-wider">Konsultasi Hukum</span>
+                        </div>
+                        <h4 class="text-xl font-bold text-gray-800 mb-2">Memahami hak anak dalam UU No. 12 Tahun 2022</h4>
+                        <p class="text-gray-600 text-sm line-clamp-2 mb-4 leading-relaxed text-sm">
+                            Penting bagi kita sebagai pendidik untuk mengerti pasal-pasal perlindungan anak terbaru agar bisa memberikan edukasi yang sesuai fakta hukum.
+                        </p>
+                        <div class="flex items-center gap-6 pt-4 border-t border-gray-50 text-sm">
+                            <button onclick="handleLike(this)" class="flex items-center gap-2 text-gray-500 hover:text-red-600 transition group">
+                                <i class="fa-regular fa-heart group-active:scale-125 transition"></i> <span class="like-count">18</span> Suka
+                            </button>
+                            <div class="flex items-center gap-2 text-gray-500">
+                                <i class="fa-regular fa-comment"></i> 5 Balasan
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-gray-900 text-white py-16">
+        <div class="container mx-auto px-6 grid md:grid-cols-4 gap-12">
+            <div class="md:col-span-2">
+                <div class="text-3xl font-bold text-red-500 mb-6">SWARA</div>
+                <p class="text-gray-400 max-w-md">Inisiatif riset sosial untuk mengintegrasikan nilai budaya tradisional Surakarta ke dalam sistem perlindungan anak nasional.</p>
+            </div>
+            <div>
+                <h4 class="font-bold mb-6">Navigasi</h4>
+                <ul class="space-y-4 text-gray-400">
+                    <li><a href="#" class="hover:text-red-500">Beranda</a></li>
+                    <li><a href="#about" class="hover:text-red-500">Metodologi Riset</a></li>
+                    <li><a href="#game" class="hover:text-red-500">Mulai Belajar</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold mb-6">Kontak Kami</h4>
+                <p class="text-gray-400">Email: info@swara.ac.id</p>
+                <div class="flex gap-4 mt-6 text-2xl text-gray-400">
+                    <i class="fa-brands fa-instagram hover:text-red-500 cursor-pointer"></i>
+                    <i class="fa-brands fa-youtube hover:text-red-500 cursor-pointer"></i>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODAL PERTANYAAN GAME -->
+    <div id="question-modal" class="modal">
+        <div class="bg-white w-full max-w-lg p-10 rounded-3xl shadow-2xl m-4 relative overflow-hidden text-center">
+            <div class="absolute top-0 left-0 w-full h-2 bg-red-600"></div>
+            <div class="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h3 class="text-2xl font-extrabold text-gray-900 mb-4">Langkah Aman!</h3>
+            <p id="question-text" class="text-gray-600 text-lg mb-8 leading-relaxed font-medium"></p>
+            <div class="grid gap-4" id="answer-options"></div>
+        </div>
+    </div>
+
+    <!-- MODAL POSTING FORUM -->
+    <div id="post-modal" class="modal">
+        <div class="bg-white w-full max-w-2xl p-8 rounded-3xl shadow-2xl m-4 relative">
+            <button onclick="togglePostModal()" class="absolute top-6 right-6 text-gray-400 hover:text-red-600 transition text-xl"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-2xl font-extrabold text-gray-900 mb-6">Mulai Diskusi Baru</h3>
+            <form id="forum-form" onsubmit="submitDiscussion(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Judul Diskusi</label>
+                    <input type="text" id="post-title" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none transition" placeholder="Tuliskan inti topik Anda...">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Isi Pesan</label>
+                    <textarea id="post-content" required rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none transition" placeholder="Ceritakan pengalaman atau pertanyaan Anda..."></textarea>
+                </div>
+                <div class="flex justify-end pt-4">
+                    <button type="submit" class="bg-[#991B1B] text-white px-8 py-3 rounded-xl font-bold hover:shadow-xl transition">Kirim Diskusi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME LOGIC ---
+        const questions = [
+            {
+                q: "Jika seseorang yang tidak kamu kenal menyentuhmu di area tertutup pakaian, apa yang harus kamu lakukan?",
+                options: ["Diam saja", "Bilang TIDAK dan lari ke orang dewasa terpercaya", "Ikuti saja apa katanya"],
+                correct: 1
+            },
+            {
+                q: "Bagian tubuh mana yang merupakan hak pribadimu dan tidak boleh disentuh sembarangan?",
+                options: ["Tangan", "Area tertutup baju dalam (Dada, Alat kelamin, Pantat)", "Rambut"],
+                correct: 1
+            },
+            {
+                q: "Apakah orang dewasa boleh memintamu menyimpan rahasia tentang hal yang membuatmu tidak nyaman?",
+                options: ["Boleh, karena rahasia itu seru", "Tidak, segera lapor ke orang tua/guru", "Hanya jika diberi hadiah"],
+                correct: 1
+            }
+        ];
+
+        let selectedPoint = null;
+        let score = 0;
+        let steps = 0;
+
+        function initBoard() {
+            const board = document.getElementById('game-board');
+            const oldPoints = board.querySelectorAll('.point');
+            oldPoints.forEach(p => p.remove());
+
+            score = 0; steps = 0;
+            updateStats();
+
+            const coords = [10, 26, 42, 58, 74, 90];
+
+            for(let r=0; r<6; r++) {
+                for(let c=0; c<6; c++) {
+                    const point = document.createElement('div');
+                    point.className = 'point';
+                    point.style.top = coords[r] + '%';
+                    point.style.left = coords[c] + '%';
+                    point.dataset.row = r;
+                    point.dataset.col = c;
+                    
+                    point.onclick = () => handlePointClick(point);
+
+                    if(r >= 4) {
+                        const piece = document.createElement('div');
+                        piece.className = 'piece piece-player';
+                        point.appendChild(piece);
+                    } else if(r <= 1) {
+                        const piece = document.createElement('div');
+                        piece.className = 'piece piece-ai';
+                        point.appendChild(piece);
+                    }
+                    board.appendChild(point);
+                }
+            }
+        }
+
+        function handlePointClick(pt) {
+            const isPlayer = pt.querySelector('.piece-player');
+            if(isPlayer) {
+                if(selectedPoint) selectedPoint.classList.remove('selected');
+                selectedPoint = pt;
+                pt.classList.add('selected');
+            } else if(selectedPoint) {
+                const r1 = parseInt(selectedPoint.dataset.row);
+                const c1 = parseInt(selectedPoint.dataset.col);
+                const r2 = parseInt(pt.dataset.row);
+                const c2 = parseInt(pt.dataset.col);
+
+                const dr = Math.abs(r1 - r2);
+                const dc = Math.abs(c1 - c2);
+
+                if(dr <= 1 && dc <= 1 && !pt.firstChild) {
+                    pt.appendChild(selectedPoint.querySelector('.piece'));
+                    selectedPoint.classList.remove('selected');
+                    selectedPoint = null;
+                    steps++;
+                    updateStats();
+                    setTimeout(showQuestion, 350);
+                }
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('stat-score').innerText = score;
+            document.getElementById('stat-steps').innerText = steps;
+        }
+
+        function showQuestion() {
+            const modal = document.getElementById('question-modal');
+            const qObj = questions[Math.floor(Math.random() * questions.length)];
+            document.getElementById('question-text').innerText = qObj.q;
+            const container = document.getElementById('answer-options');
+            container.innerHTML = '';
+            
+            qObj.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "p-4 border-2 border-gray-100 rounded-2xl text-left hover:bg-red-50 hover:border-red-200 transition font-semibold text-gray-700 flex justify-between items-center group";
+                btn.innerHTML = `${opt} <i class="fa-solid fa-chevron-right opacity-0 group-hover:opacity-100 transition"></i>`;
+                btn.onclick = () => {
+                    if(idx === qObj.correct) score += 20;
+                    updateStats();
+                    modal.classList.remove('active');
+                };
+                container.appendChild(btn);
+            });
+            modal.classList.add('active');
+        }
+
+        // --- FORUM LOGIC ---
+        function togglePostModal() {
+            const modal = document.getElementById('post-modal');
+            modal.classList.toggle('active');
+        }
+
+        function handleLike(btn) {
+            const icon = btn.querySelector('i');
+            const counter = btn.querySelector('.like-count');
+            let currentLikes = parseInt(counter.innerText);
+
+            if(icon.classList.contains('fa-regular')) {
+                icon.classList.replace('fa-regular', 'fa-solid');
+                icon.classList.add('text-red-600');
+                counter.innerText = currentLikes + 1;
+            } else {
+                icon.classList.replace('fa-solid', 'fa-regular');
+                icon.classList.remove('text-red-600');
+                counter.innerText = currentLikes - 1;
+            }
+        }
+
+        function submitDiscussion(e) {
+            e.preventDefault();
+            const title = document.getElementById('post-title').value;
+            const content = document.getElementById('post-content').value;
+            
+            if(title && content) {
+                const forumList = document.getElementById('forum-list');
+                const newPost = document.createElement('div');
+                newPost.className = "bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-lg transition-all animate-fadeIn";
+                newPost.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">U</div>
+                            <div>
+                                <h5 class="text-sm font-bold text-gray-900">User Baru</h5>
+                                <p class="text-[10px] text-gray-400">Baru saja</p>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 bg-gray-50 text-gray-600 text-[10px] font-bold rounded-full uppercase tracking-wider">Topik Baru</span>
+                    </div>
+                    <h4 class="text-xl font-bold text-gray-800 mb-2">${title}</h4>
+                    <p class="text-gray-600 text-sm mb-4 leading-relaxed">${content}</p>
+                    <div class="flex items-center gap-6 pt-4 border-t border-gray-50 text-sm">
+                        <button onclick="handleLike(this)" class="flex items-center gap-2 text-gray-500 hover:text-red-600 transition group">
+                            <i class="fa-regular fa-heart group-active:scale-125 transition"></i> <span class="like-count">0</span> Suka
+                        </button>
+                        <div class="flex items-center gap-2 text-gray-500">
+                            <i class="fa-regular fa-comment"></i> 0 Balasan
+                        </div>
+                    </div>
+                `;
+                
+                forumList.prepend(newPost);
+                
+                // Reset & Close
+                document.getElementById('forum-form').reset();
+                togglePostModal();
+            }
+        }
+
+        window.onload = initBoard;
+    </script>
+</body>
+</html>
